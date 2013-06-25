@@ -55,7 +55,7 @@ int lru_eject_by_size(lru_t *lru, int size, EjectionCallback eject, void * conta
   return ejected;
 }
 
-lru_item_t * lru_insert(lru_t *lru, char* key, int keylen, void * value, int size, DestroyCallback destroy) {
+lru_item_t * lru_insert(lru_t *lru, char* key, int keylen, void * value, int size, int timeout, DestroyCallback destroy) {
   lru_item_t *item;
   
   item = malloc(sizeof(lru_item_t));
@@ -66,12 +66,17 @@ lru_item_t * lru_insert(lru_t *lru, char* key, int keylen, void * value, int siz
   item->vallen = size;
   item->destroy = destroy;
   item->node = d_node_create(item);
+  // try and add these, for invalidating expired items
+  item->timestamp = time(NULL);
+  // yep
+  item->timeout = timeout;
   d_list_push(lru->list, item->node);
   return item;
 }
 
 void lru_touch(lru_t *lru, lru_item_t *item) {
   d_list_remove(lru->list, item->node);
+  item->timestamp = time(NULL);
   d_list_push(lru->list, item->node);
 }
 

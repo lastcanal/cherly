@@ -19,7 +19,7 @@ static ErlNifFunc nif_funcs[] =
     {"start",  1, cherly_nif_init},
     {"stop",   1, cherly_nif_stop},
     {"get" ,   2, cherly_nif_get},
-    {"put" ,   3, cherly_nif_put},
+    {"put" ,   4, cherly_nif_put},
     {"remove", 2, cherly_nif_remove},
     {"size",   1, cherly_nif_size},
     {"items" , 1, cherly_nif_items}
@@ -134,8 +134,9 @@ static ERL_NIF_TERM cherly_nif_put(ErlNifEnv* env, int argc, const ERL_NIF_TERM 
   ErlNifBinary keybin;
   ErlNifBinary bin;
   bool ret;
+  int timeout;
 
-  if (argc < 3) {
+  if (argc < 4) {
     return enif_make_badarg(env);
   }
 
@@ -154,7 +155,12 @@ static ERL_NIF_TERM cherly_nif_put(ErlNifEnv* env, int argc, const ERL_NIF_TERM 
     return enif_make_badarg(env);
   }
 
-  ret = cherly_put(obj, keybin.data, keybin.size, bin.data, bin.size, NULL);
+  if(!enif_get_int(env, argv[3], &timeout)) {
+
+    return enif_make_badarg(env);
+  }
+
+  ret = cherly_put(obj, keybin.data, keybin.size, bin.data, bin.size, timeout, NULL);
   return ret ? atom_ok : enif_make_tuple2(env, atom_error, atom_oom);
 }
 

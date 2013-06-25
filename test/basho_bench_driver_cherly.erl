@@ -73,7 +73,7 @@ run(get, KeyGen, _ValueGen, #state{handler = C, check_integrity = CI} = State) -
 run(put, KeyGen, ValueGen, #state{handler = C, check_integrity = CI} = State) ->
     Key = KeyGen(),
     Val = ValueGen(),
-    case cherly:put(C, Key, Val) of
+    case cherly:put(C, Key, Val, 0) of
         ok ->
             case CI of
                 true ->

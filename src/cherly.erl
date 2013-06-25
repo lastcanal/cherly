@@ -13,7 +13,7 @@
 -author('cliff@moonpolysoft.com').
 -author('Yoshiyuki Kanno').
 
--export([start/1, put/3, get/2, remove/2, size/1, items/1, stop/1]).
+-export([start/1, put/4, get/2, remove/2, size/1, items/1, stop/1]).
 -on_load(init/0).
 
 
@@ -43,12 +43,16 @@ init() ->
 start(_Size) ->
     exit(nif_library_not_loaded).
 
+% -spec(put(any(), binary(), binary()) -> ok | {error, any()}).
+% put(Res, Key, Value) ->
+%     io:format("called put~n"),
+%     put(Res, Key, Value, 0).
 
 %% @doc Insert an object into the cherly
 %%
--spec(put(any(), binary(), binary()) ->
+-spec(put(any(), binary(), binary(), integer()) ->
              ok | {error, any()}).
-put(_Res, _Key, _Value) ->
+put(_Res, _Key, _Value, _Timeout) ->
     exit(nif_library_not_loaded).
 
 
