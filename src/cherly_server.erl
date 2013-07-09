@@ -39,6 +39,9 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
+
+%% FIXME: we should be using something like folsom for this
+%% we also need to worry about evictions
 -record(state, {handler,
                 total_cache_size = 0 :: integer(),
                 stats_gets	     = 0 :: integer(),
@@ -170,6 +173,8 @@ handle_call({delete, Key}, _From, State = #state{handler    = Handler,
     case catch cherly:remove(Handler, Key) of
         ok ->
             {reply, ok, State#state{stats_dels = Dels + 1}};
+        not_found ->
+            {reply, not_found, State};
         {'EXIT', Cause} ->
             error_logger:error_msg("~p,~p,~p,~p~n",
                                    [{module, ?MODULE_STRING},

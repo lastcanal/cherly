@@ -172,6 +172,7 @@ static ERL_NIF_TERM cherly_nif_remove(ErlNifEnv* env, int argc, const ERL_NIF_TE
   cherly_t *obj;
   ErlNifResourceType* pert;
   ErlNifBinary keybin;
+  void* value;
 
   if (argc < 2) {
     return enif_make_badarg(env);
@@ -190,7 +191,12 @@ static ERL_NIF_TERM cherly_nif_remove(ErlNifEnv* env, int argc, const ERL_NIF_TE
     return enif_make_badarg(env);
   }
 
-  cherly_remove(obj, keybin.data, keybin.size);
+  value = cherly_remove(obj, keybin.data, keybin.size);
+
+  if (value == NULL) {
+    return atom_not_found;
+  }
+
   return atom_ok;
 }
 

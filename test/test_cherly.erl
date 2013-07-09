@@ -219,6 +219,7 @@ server_test() ->
                               cached_size = 12}, Stats1),
 
     ok = cherly_server:delete(ProcId, K),
+    not_found = cherly_server:delete(ProcId, K),
     {ok, Stats2} = cherly_server:stats(ProcId),
     ?assertEqual(#cache_stats{gets = 1,
                               puts = 1,
