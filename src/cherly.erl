@@ -55,6 +55,16 @@ start(_Size) ->
 put(_Res, _Key, _Value, _Timeout) ->
     exit(nif_library_not_loaded).
 
+%% @doc Touch an object in cherly, update timeout
+%%
+%% we will define a new function here, basically if the nif library
+%% does not load properly (the on_load(init/0) call), then the function
+%% will hit exit. else it will call the cherly.so library
+-spec(touch(any(), binary(), integer()) -> 
+    ok | not_found | {error, any()}).
+touch(_Res, _Key, _Timeout) ->
+    exit(nif_library_not_loaded).
+
 
 %% @doc Retrieve an object from the cherly
 %%
