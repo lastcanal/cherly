@@ -13,7 +13,7 @@
 -author('cliff@moonpolysoft.com').
 -author('Yoshiyuki Kanno').
 
--export([start/1, put/3, get/2, remove/2, size/1, items/1, stop/1]).
+-export([start/1, put/4, get/2, remove/2, size/1, items/1, touch/3, stop/1]).
 -on_load(init/0).
 
 
@@ -43,12 +43,26 @@ init() ->
 start(_Size) ->
     exit(nif_library_not_loaded).
 
+% -spec(put(any(), binary(), binary()) -> ok | {error, any()}).
+% put(Res, Key, Value) ->
+%     io:format("called put~n"),
+%     put(Res, Key, Value, 0).
 
 %% @doc Insert an object into the cherly
 %%
--spec(put(any(), binary(), binary()) ->
+-spec(put(any(), binary(), binary(), integer()) ->
              ok | {error, any()}).
-put(_Res, _Key, _Value) ->
+put(_Res, _Key, _Value, _Timeout) ->
+    exit(nif_library_not_loaded).
+
+%% @doc Touch an object in cherly, update timeout
+%%
+%% we will define a new function here, basically if the nif library
+%% does not load properly (the on_load(init/0) call), then the function
+%% will hit exit. else it will call the cherly.so library
+-spec(touch(any(), binary(), integer()) -> 
+    ok | not_found | {error, any()}).
+touch(_Res, _Key, _Timeout) ->
     exit(nif_library_not_loaded).
 
 

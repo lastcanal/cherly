@@ -2,6 +2,7 @@
 #include <string.h>
 #include "cherly.h"
 #include "common.h"
+#include <time.h>
 
 static void cherly_eject_callback(cherly_t *cherly, char *key, int length);
 
@@ -24,7 +25,7 @@ void cherly_init(cherly_t *cherly, int options, unsigned long long max_size) {
  * Insert an object into LRU-Storage
  */
 // node -> item -> value
-bool cherly_put(cherly_t *cherly, void *key, int length, void *value, int size, DestroyCallback destroy) {
+bool cherly_put(cherly_t *cherly, void *key, int length, void *value, int size, int timeout, DestroyCallback destroy) {
   lru_item_t * item;
   String skey, sval;
   bool exists;
@@ -63,7 +64,7 @@ bool cherly_put(cherly_t *cherly, void *key, int length, void *value, int size, 
   memcpy(bufval, value, size);
 
   // Insert an object into lru-storage
-  item = lru_insert(cherly->lru, bufkey, length, bufval, size, destroy);
+  item = lru_insert(cherly->lru, bufkey, length, bufval, size, timeout, destroy);
   if (item == NULL) return false;
 
   // After put-operation
@@ -95,7 +96,18 @@ void* cherly_get(cherly_t *cherly, void *key, int length, int* vallen) {
   if (!exists) {
     return nil;
   } else {
+    // need to check time_t and timeout
     item = (lru_item_t *)sval.str;
+
+    if(item->timeout > 0) {
+      time_t currTime = time(NULL);
+      if((currTime - item->timeout) > item->timestamp) {
+        // delete item from lru
+        cherly_remove(cherly, key, length);
+        return nil;
+      }
+    }
+
     lru_touch(cherly->lru, item);
     *vallen = lru_item_vallen(item);
 
@@ -145,7 +157,7 @@ static void cherly_eject_callback(cherly_t *cherly, char *key, int length) {
 /**
  * Remove an object from LRU-Storage
  */
-void cherly_remove(cherly_t *cherly, void *key, int length) {
+void* cherly_remove(cherly_t *cherly, void *key, int length) {
   lru_item_t *item;
   String skey, sval;
   bool exists;
@@ -155,8 +167,11 @@ void cherly_remove(cherly_t *cherly, void *key, int length) {
   skey.len = length;
   runtime_mapaccess(&StrMapType, cherly->hm, (byte*)&skey, (byte*)&sval, &exists);
 
+
+  // TODO: give a return value so we can do not_exists for memcached
+  // we could also use bloom filters!
   if (!exists) {
-    return;
+    return 0;
   }
 
   item = (lru_item_t *)sval.str;
@@ -167,6 +182,8 @@ void cherly_remove(cherly_t *cherly, void *key, int length) {
   cherly->items_length--;
 
   runtime_mapassign(&StrMapType, cherly->hm, (byte*)&skey, nil);
+
+  return 1;
 }
 
 

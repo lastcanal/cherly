@@ -2,6 +2,7 @@
 #define __LRU__
 
 #include "double_link.h"
+#include <time.h>
 
 
 //the destroy callback, this is needed to free memory for shit
@@ -20,6 +21,8 @@ typedef struct _lru_item_t {
   int keylen;
   void * value;
   int vallen;
+  time_t timestamp;
+  int timeout;
   d_node_t * node;
   DestroyCallback destroy;
 } lru_item_t;
@@ -33,7 +36,7 @@ typedef struct _lru_item_t {
 lru_t * lru_create();
 void lru_destroy(lru_t *lru);
 int lru_eject_by_size(lru_t *lru, int size, EjectionCallback cb, void * container);
-lru_item_t * lru_insert(lru_t *lru, char* key, int keylen, void * value, int size, DestroyCallback destroy);
+lru_item_t * lru_insert(lru_t *lru, char* key, int keylen, void * value, int size, int timeout, DestroyCallback destroy);
 void lru_touch(lru_t *lru, lru_item_t *item);
 void lru_remove_and_destroy(lru_t *lru, lru_item_t *item);
 

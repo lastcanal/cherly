@@ -20,15 +20,19 @@ static ERL_NIF_TERM cherly_nif_remove(ErlNifEnv* env, int argc, const ERL_NIF_TE
 static ERL_NIF_TERM cherly_nif_size(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM cherly_nif_items(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 
+// declare the function
+static ERL_NIF_TERM cherly_nif_touch(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
+
 static ErlNifFunc nif_funcs[] =
   {
     {"start",  1, cherly_nif_init, CHERLY_NIF_FLAGS},
     {"stop",   1, cherly_nif_stop, CHERLY_NIF_FLAGS},
     {"get" ,   2, cherly_nif_get, CHERLY_NIF_FLAGS},
-    {"put" ,   3, cherly_nif_put, CHERLY_NIF_FLAGS},
+    {"put" ,   4, cherly_nif_put, CHERLY_NIF_FLAGS},
     {"remove", 2, cherly_nif_remove, CHERLY_NIF_FLAGS},
     {"size",   1, cherly_nif_size, CHERLY_NIF_FLAGS},
-    {"items" , 1, cherly_nif_items, CHERLY_NIF_FLAGS}
+    {"items" , 1, cherly_nif_items, CHERLY_NIF_FLAGS},
+    {"touch",  3, cherly_nif_touch, CHERLY_NIF_FLAGS}
   };
 
 static ERL_NIF_TERM atom_ok;
@@ -130,6 +134,56 @@ static ERL_NIF_TERM cherly_nif_get(ErlNifEnv* env, int argc, const ERL_NIF_TERM 
   return enif_make_tuple2(env, atom_ok, enif_make_binary(env, &bin));
 }
 
+static ERL_NIF_TERM cherly_nif_touch(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+{
+  cherly_t *obj;
+  int vallen;
+  void* value;
+  int timeout;
+
+  ErlNifResourceType* pert;
+  ErlNifBinary keybin;
+  ErlNifBinary bin;
+
+  if (argc < 3) {
+    return enif_make_badarg(env);
+  }
+
+  // Make an ErlNifResourceType
+  pert = (ErlNifResourceType*)enif_priv_data(env);
+  // Resource is the data structure that we use to bind erlang and c
+  if (!enif_get_resource(env, argv[0], pert, (void**)&obj)) {
+    return enif_make_badarg(env);
+  }
+
+  // get second arg as a binary (it's our key)
+  if (!enif_inspect_binary(env, argv[1], &keybin)) {
+    return enif_make_badarg(env);
+  }
+
+  // Check if the key is null
+  if (keybin.size <= 0) {
+    return enif_make_badarg(env);
+  }
+
+  // get our third parameter (timeout)
+  if(!enif_get_int(env, argv[2], &timeout)) {
+    return enif_make_badarg(env);
+  }
+
+  // now we need to do a touch
+  // we return either atom_ok, atom_not_found, or an error tuple {error, "message"} using 
+  // enif_make_tuple2
+
+  // unfortunately, we don't exactly have a 'touch' function per-say in the cherly.c library,
+  // so we will need to add something like that. You can see on line 111 in cherly.c the lru_touch call
+  
+  // we will also need to update the timeout in the struct, you can see that in the lru_item_t struct
+  // (example in the cherly.c function, starting on line 84)
+
+  return atom_ok;
+}
+
 
 /**
  * Insert an object into LRU-Storage
@@ -140,8 +194,9 @@ static ERL_NIF_TERM cherly_nif_put(ErlNifEnv* env, int argc, const ERL_NIF_TERM 
   ErlNifBinary keybin;
   ErlNifBinary bin;
   bool ret;
+  int timeout;
 
-  if (argc < 3) {
+  if (argc < 4) {
     return enif_make_badarg(env);
   }
 
@@ -160,7 +215,12 @@ static ERL_NIF_TERM cherly_nif_put(ErlNifEnv* env, int argc, const ERL_NIF_TERM 
     return enif_make_badarg(env);
   }
 
-  ret = cherly_put(obj, keybin.data, keybin.size, bin.data, bin.size, NULL);
+  if(!enif_get_int(env, argv[3], &timeout)) {
+
+    return enif_make_badarg(env);
+  }
+
+  ret = cherly_put(obj, keybin.data, keybin.size, bin.data, bin.size, timeout, NULL);
   return ret ? atom_ok : enif_make_tuple2(env, atom_error, atom_oom);
 }
 
@@ -172,6 +232,7 @@ static ERL_NIF_TERM cherly_nif_remove(ErlNifEnv* env, int argc, const ERL_NIF_TE
   cherly_t *obj;
   ErlNifResourceType* pert;
   ErlNifBinary keybin;
+  void* value;
 
   if (argc < 2) {
     return enif_make_badarg(env);
@@ -190,7 +251,12 @@ static ERL_NIF_TERM cherly_nif_remove(ErlNifEnv* env, int argc, const ERL_NIF_TE
     return enif_make_badarg(env);
   }
 
-  cherly_remove(obj, keybin.data, keybin.size);
+  value = cherly_remove(obj, keybin.data, keybin.size);
+
+  if (value == NULL) {
+    return atom_not_found;
+  }
+
   return atom_ok;
 }
 

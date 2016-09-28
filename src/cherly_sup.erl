@@ -31,7 +31,7 @@
 -include_lib("eunit/include/eunit.hrl").
 
 %% External API
--export([start_link/0, stop/0]).
+-export([start_link/0, stop/0, start_child/2]).
 
 %% Callbacks
 -export([init/1]).
@@ -40,10 +40,17 @@
 -define(MAX_TIME,                60).
 -define(SHUTDOWN_WAITING_TIME, 2000).
 
+-define(CHILD_SPEC(Id, CacheSize), 
+    {Id, 
+        {cherly_server, start_link, [Id, CacheSize]}, 
+        permanent, ?SHUTDOWN_WAITING_TIME, worker, [cherly_server]
+    }).
+
+
 -ifdef(TEST).
--define(DEF_TOTA_CACHE_SIZE, 1024 * 1024). %% 1MB
+-define(DEF_TOTAL_CACHE_SIZE, 1024 * 1024). %% 1MB
 -else.
--define(DEF_TOTA_CACHE_SIZE, 1024 * 1024 * 1024). %% 1GB
+-define(DEF_TOTAL_CACHE_SIZE, 1024 * 1024 * 1024). %% 1GB
 -endif.
 
 
@@ -54,11 +61,13 @@
 %% @doc start link.
 %% @end
 start_link() ->
+    %% should put in which partitions and such
+    %% total cache size should be for all partitions? or cache size per partition?
     TotalCacheSize = case application:get_env(cherly, total_cache_size) of
                          {ok, Value1} when is_integer(Value1) ->
                              Value1;
                          _ ->
-                             ?DEF_TOTA_CACHE_SIZE
+                             ?DEF_TOTAL_CACHE_SIZE
                      end,
     supervisor:start_link({local, ?MODULE}, ?MODULE, [TotalCacheSize]).
 
@@ -76,6 +85,10 @@ stop() ->
     end.
 
 
+start_child(Id, CacheSize) ->
+    supervisor:start_child(?MODULE, ?CHILD_SPEC(Id, CacheSize)).
+
+
 %% ---------------------------------------------------------------------
 %% Callbacks
 %% ---------------------------------------------------------------------
@@ -83,8 +96,7 @@ stop() ->
 %% @doc stop process.
 %% @end
 %% @private
-init([TotalCacheSize]) ->
+init([_TotalCacheSize]) ->
     {ok, {{one_for_one, ?MAX_RESTART, ?MAX_TIME},
-          [{cherly_server, {cherly_server, start_link, [TotalCacheSize]},
-            permanent, ?SHUTDOWN_WAITING_TIME, worker, [cherly_server]}]}}.
+          []}}.
 

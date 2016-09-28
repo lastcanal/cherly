@@ -9,7 +9,7 @@ START_TEST(create_and_insert) {
   
   lru = lru_create();
   fail_unless(NULL != lru->list);
-  lru_insert(lru, "key", 3, "value", 5, NULL);
+  lru_insert(lru, "key", 3, "value", 5, 0, NULL);
   fail_unless(NULL != lru->list->head);
   lru_destroy(lru);
 }
@@ -20,9 +20,9 @@ START_TEST(touch) {
   lru_item_t * one;
   
   lru = lru_create();
-  one = lru_insert(lru, "one", 3, "one", 3, NULL);
-  lru_insert(lru, "two", 3, "two", 3, NULL);
-  lru_insert(lru, "three", 5, "three", 5, NULL);
+  one = lru_insert(lru, "one", 3, "one", 3, 0, NULL);
+  lru_insert(lru, "two", 3, "two", 3, 0, NULL);
+  lru_insert(lru, "three", 5, "three", 5, 0, NULL);
   lru_touch(lru, one);
   fail_unless(one == (lru_item_t*)lru->list->head->data);
   lru_destroy(lru);
@@ -34,9 +34,9 @@ START_TEST(eject_one) {
   int ejected = 0;
   
   lru = lru_create();
-  lru_insert(lru, "one", 3, "one", 3, NULL);
-  lru_insert(lru, "two", 3, "two", 3, NULL);
-  lru_insert(lru, "three", 5, "three", 5, NULL);
+  lru_insert(lru, "one", 3, "one", 3, 0, NULL);
+  lru_insert(lru, "two", 3, "two", 3, 0, NULL);
+  lru_insert(lru, "three", 5, "three", 5, 0, NULL);
   ejected = lru_eject_by_size(lru, 3, NULL, NULL);
   dprintf("ejected %d\n", ejected);
   fail_unless(ejected > 0);
@@ -50,9 +50,9 @@ START_TEST(eject_multiple) {
   mark_point();
   lru = lru_create();
   mark_point();
-  lru_insert(lru, "one", 3, "one", 3, NULL);
-  lru_insert(lru, "two", 3, "two", 3, NULL);
-  three = lru_insert(lru, "three", 5, "three", 5, NULL);
+  lru_insert(lru, "one", 3, "one", 3, 0, NULL);
+  lru_insert(lru, "two", 3, "two", 3, 0, NULL);
+  three = lru_insert(lru, "three", 5, "three", 5, 0, NULL);
   ejected = lru_eject_by_size(lru, 12, NULL, NULL);
   dprintf("test ejected %d\n", ejected);
   fail_unless((lru_item_t*)lru->list->head->data == three);

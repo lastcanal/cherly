@@ -33,12 +33,15 @@
 
 %% API
 -export([start_link/2, stop/1,
-         get/2, put/3, delete/2, stats/1, items/1, size/1]).
+         get/2, put/3, put/4, delete/2, stats/1, items/1, size/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
+
+%% FIXME: we should be using something like folsom for this
+%% we also need to worry about evictions
 -record(state, {handler,
                 total_cache_size = 0 :: integer(),
                 stats_gets	     = 0 :: integer(),
@@ -46,6 +49,8 @@
                 stats_dels	     = 0 :: integer(),
                 stats_hits       = 0 :: integer()
                }).
+
+-define(DEFAULT_TIMEOUT, 0).
 
 %%--------------------------------------------------------------------
 %% API
@@ -75,7 +80,14 @@ get(Id, Key) ->
 -spec(put(atom(), binary(), binary()) ->
              ok | {error, any()}).
 put(Id, Key, Value) ->
-    gen_server:call(Id, {put, Key, Value}).
+    put(Id, Key, Value, ?DEFAULT_TIMEOUT).
+
+%% @doc Insert a key-value pair into the cherly
+%%
+-spec(put(atom(), binary(), binary(), integer()) ->
+             ok | {error, any()}).
+put(Id, Key, Value, Timeout) ->
+    gen_server:call(Id, {put, Key, Value, Timeout}).
 
 
 %% @doc Remove a key-value pair by a specified key into the cherly
@@ -137,9 +149,9 @@ handle_call({get, Key}, _From, #state{handler    = Handler,
             {reply, {error, Cause}, State}
         end;
 
-handle_call({put, Key, Val}, _From, #state{handler    = Handler,
+handle_call({put, Key, Val, Timeout}, _From, #state{handler    = Handler,
                                            stats_puts = Puts} = State) ->
-    case catch cherly:put(Handler, Key, Val) of
+    case catch cherly:put(Handler, Key, Val, Timeout) of
         ok ->
             {reply, ok, State#state{stats_puts = Puts + 1}};
         {'EXIT', Cause} ->
@@ -161,6 +173,8 @@ handle_call({delete, Key}, _From, State = #state{handler    = Handler,
     case catch cherly:remove(Handler, Key) of
         ok ->
             {reply, ok, State#state{stats_dels = Dels + 1}};
+        not_found ->
+            {reply, not_found, State};
         {'EXIT', Cause} ->
             error_logger:error_msg("~p,~p,~p,~p~n",
                                    [{module, ?MODULE_STRING},
