@@ -6,6 +6,12 @@
 
 #define CHERLY_RES_TYPE "cherly_res"
 
+#ifdef ERL_NIF_DIRTY_JOB_CPU_BOUND
+#define CHERLY_NIF_FLAGS ERL_NIF_DIRTY_JOB_CPU_BOUND
+#else
+#define CHERLY_NIF_FLAGS 0
+#endif
+
 static ERL_NIF_TERM cherly_nif_init(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM cherly_nif_stop(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM cherly_nif_get(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
@@ -16,13 +22,13 @@ static ERL_NIF_TERM cherly_nif_items(ErlNifEnv* env, int argc, const ERL_NIF_TER
 
 static ErlNifFunc nif_funcs[] =
   {
-    {"start",  1, cherly_nif_init},
-    {"stop",   1, cherly_nif_stop},
-    {"get" ,   2, cherly_nif_get},
-    {"put" ,   3, cherly_nif_put},
-    {"remove", 2, cherly_nif_remove},
-    {"size",   1, cherly_nif_size},
-    {"items" , 1, cherly_nif_items}
+    {"start",  1, cherly_nif_init, CHERLY_NIF_FLAGS},
+    {"stop",   1, cherly_nif_stop, CHERLY_NIF_FLAGS},
+    {"get" ,   2, cherly_nif_get, CHERLY_NIF_FLAGS},
+    {"put" ,   3, cherly_nif_put, CHERLY_NIF_FLAGS},
+    {"remove", 2, cherly_nif_remove, CHERLY_NIF_FLAGS},
+    {"size",   1, cherly_nif_size, CHERLY_NIF_FLAGS},
+    {"items" , 1, cherly_nif_items, CHERLY_NIF_FLAGS}
   };
 
 static ERL_NIF_TERM atom_ok;
