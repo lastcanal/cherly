@@ -231,6 +231,34 @@ server_test() ->
     {ok, 0} = cherly_server:items(ProcId),
     {ok, 0} = cherly_server:size(ProcId),
 
+    {ok, Ref} = cherly_server:cast(ProcId, {put, K, V, 0}),
+
+    ok = receive
+      {cherly_response, Ref, ok} -> ok;
+      Other -> Other
+    end,
+
+    {ok, Ref2} = cherly_server:cast(ProcId, {get, K}),
+
+    ok = receive
+      {cherly_response, Ref2, {ok, V}} -> ok;
+      Other2 -> Other2
+    end,
+
+    {ok, Ref3} = cherly_server:cast(ProcId, {delete, K}),
+
+    ok = receive
+      {cherly_response, Ref3, ok} -> ok;
+      Other3 -> Other3
+    end,
+
+    {ok, Ref4} = cherly_server:cast(ProcId, {get, K}),
+
+    ok = receive
+      {cherly_response, Ref4, not_found} -> ok;
+      Other4 -> Other4
+    end,
+
     cherly_server:stop(ProcId),
     ok.
 

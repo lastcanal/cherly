@@ -32,7 +32,7 @@
 -include_lib("eunit/include/eunit.hrl").
 
 %% API
--export([start_link/2, stop/1,
+-export([start_link/2, stop/1, call/2, cast/2, cast/3,
          get/2, put/3, put/4, delete/2, stats/1, items/1, size/1]).
 
 %% gen_server callbacks
@@ -64,15 +64,33 @@ start_link(Id, CacheSize) ->
 %% Function: -> ok
 %% Description: Manually stops the server.
 stop(Pid) ->
-    gen_server:cast(Pid, stop).
+    cast(Pid, stop, self()).
 
+%% @doc gen_servrer call
+%%
+-spec(call(atom(), tuple()) ->
+           undefined | binary() | {error, any()}).
+call(Id, Params) ->
+  gen_server:call(Id, Params).
+
+%% @doc gen_server cast
+%%
+-spec(cast(atom(), tuple(), pid()) ->
+             {ok, reference()} | {error, any()}).
+cast(Id, Params, ReplyTo) ->
+  Ref = make_ref(),
+  CastReply = gen_server:cast(Id, {Params, Ref, ReplyTo}),
+  {CastReply, Ref}.
+
+cast(Id, Params) ->
+  cast(Id, Params, self()).
 
 %% @doc Retrieve a value associated with a specified key
 %%
 -spec(get(atom(), binary()) ->
              undefined | binary() | {error, any()}).
 get(Id, Key) ->
-    gen_server:call(Id, {get, Key}).
+    call(Id, {get, Key}).
 
 
 %% @doc Insert a key-value pair into the cherly
@@ -87,35 +105,35 @@ put(Id, Key, Value) ->
 -spec(put(atom(), binary(), binary(), integer()) ->
              ok | {error, any()}).
 put(Id, Key, Value, Timeout) ->
-    gen_server:call(Id, {put, Key, Value, Timeout}).
+    call(Id, {put, Key, Value, Timeout}).
 
 
 %% @doc Remove a key-value pair by a specified key into the cherly
 -spec(delete(atom(), binary()) ->
              ok | {error, any()}).
 delete(Id, Key) ->
-    gen_server:call(Id, {delete, Key}).
+    call(Id, {delete, Key}).
 
 
 %% @doc Return server's state
 -spec(stats(atom()) ->
              any()).
 stats(Id) ->
-    gen_server:call(Id, {stats}).
+    call(Id, {stats}).
 
 
 %% @doc Return server's items
 -spec(items(atom()) ->
              any()).
 items(Id) ->
-    gen_server:call(Id, {items}).
+    call(Id, {items}).
 
 
 %% @doc Return server's summary of cache size
 -spec(size(atom()) ->
              any()).
 size(Id) ->
-    gen_server:call(Id, {size}).
+    call(Id, {size}).
 
 
 %%====================================================================
@@ -214,6 +232,16 @@ handle_call({size}, _From, #state{handler = Handler} = State) ->
 
 handle_call(_Request, _From, State) ->
     {reply, undefined, State}.
+
+handle_cast({Request, Ref, ReplyTo}, State) ->
+  case catch handle_call(Request, ReplyTo, State) of
+    {reply, Reply, State2} ->
+      ReplyTo ! {cherly_response, Ref, Reply},
+     {noreply, State2};
+    {'EXIT', Cause} ->
+      ReplyTo ! {cherly_error, Ref, Cause},
+      {noreply, State}
+  end;
 
 handle_cast(stop, State) ->
     {stop, normal, State};
